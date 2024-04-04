@@ -107,6 +107,11 @@ public class CaesarCipher {
     }};
     private static final int COUNT_WORDS_TO_VALIDATE = 5;
 
+    /**
+     *  Шифровка шифром цезаря с ключом key
+     *  Исходные данные List<String> data
+     *  Возвращает List<String> зашифрованных данных
+     */
     public static List<String> encrypt(List<String> data, int key) {
         List<String> result = new ArrayList<>();
         for (String string : data) {
@@ -131,6 +136,11 @@ public class CaesarCipher {
         return result;
     }
 
+    /**
+     *  Расшифровка шифром цезаря с ключом key
+     *  Исходные данные List<String> data
+     *  Возвращает List<String> расшифрованных данных
+     */
     public static List<String> decrypt(List<String> data, int key) {
         List<String> result = new ArrayList<>();
         for (String string : data) {
@@ -158,6 +168,12 @@ public class CaesarCipher {
         return result;
     }
 
+    /**
+     *  Подбор ключа методом brute force
+     *  Осуществляется последовательный перебор ключа и расшифровка методом decrypt
+     *  Проверка успешной расшифровки осуществляется нахождением в расшифрованных данных слов из FREQUENT_WORDS
+     *  Если слов из FREQUENT_WORDS найдено больше чем COUNT_WORDS_TO_VALIDATE расшифровка считается успешной
+     */
     public static int bruteForce(List<String> data, List<String> decryptedData) {
         for (int keyValue = 0; keyValue < ALPHABET.length(); keyValue++) {
             List<String> result = decrypt(data, keyValue);
@@ -179,8 +195,54 @@ public class CaesarCipher {
         return -1;
     }
 
+    /**
+     *  Взлом шифра методом частотного анализа
+     *  Производится поиск наиболее часто встречающегося символа
+     *  Согласно данным Национального корпуса русского языка наиболее часто встречаются буквы о(11%) е(9%) а(8%) и(7%)
+     *  Предполагается, что найденный символ соответствует одной из этих букв
+     */
     public static int frequencyAnalyze(List<String> data, List<String> decryptedData) {
-        decryptedData.addAll(data);
+        HashMap<Character, Integer> freq = new HashMap<>();
+        for (String str : data) {
+            for (int i = 0; i < str.length(); i++) {
+                char ch = Character.toLowerCase(str.charAt(i));
+                int charPos = ALPHABET.indexOf(ch);
+                if (charPos != -1) {
+                    if (freq.containsKey(ch)) {
+                        freq.put(ch, freq.get(ch) + 1);
+                    } else {
+                        freq.put(ch, 1);
+                    }
+                }
+            }
+        }
+        char maxChar = 0;
+        int max = 0;
+        for (Map.Entry<Character, Integer> elem : freq.entrySet()) {
+            if (elem.getValue() > max) {
+                maxChar = elem.getKey();
+                max = elem.getValue();
+            }
+        }
+        char[] FREQ_CHARS = { 'о', 'е', 'а', 'и'};
+        for (char freqChar : FREQ_CHARS) {
+            int keyValue = Math.abs(ALPHABET.indexOf(freqChar) - ALPHABET.indexOf(maxChar));
+            List<String> result = decrypt(data, keyValue);
+            int countValidWords = 0;
+            for (String str : result) {
+                StringTokenizer tokenizer = new StringTokenizer(str, ",.?! :;'\"_\\/()");
+                while (tokenizer.hasMoreTokens()) {
+                    String s = tokenizer.nextToken();
+                    if (FREQUENT_WORDS.contains(s)) {
+                        countValidWords++;
+                    }
+                }
+            }
+            if (countValidWords > COUNT_WORDS_TO_VALIDATE) {
+                decryptedData.addAll(result);
+                return keyValue;
+            }
+        }
         return -1;
     }
 }
