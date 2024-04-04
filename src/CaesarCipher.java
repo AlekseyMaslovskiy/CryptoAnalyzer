@@ -1,7 +1,4 @@
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.StringTokenizer;
+import java.util.*;
 
 public class CaesarCipher {
     private static final String ALPHABET = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
@@ -33,6 +30,7 @@ public class CaesarCipher {
         add("за");      add("как");     add("рука");        add("иметь");
         add("свой");    add("уже");     add("даже");        add("ничто");
     }};
+    private static final int COUNT_WORDS_TO_VALIDATE = 5;
     public static List<String> encrypt(List<String> data, int key) {
         List<String> result = new ArrayList<>();
         for (String string : data) {
@@ -82,9 +80,9 @@ public class CaesarCipher {
         }
         return result;
     }
-    public static List<String> bruteForce(List<String> data) {
-        for (int i = 0; i < ALPHABET.length(); i++) {
-            List<String> result = decrypt(data, i);
+    public static int bruteForce(List<String> data, List<String> decryptedData) {
+        for (int keyValue = 0; keyValue < ALPHABET.length(); keyValue++) {
+            List<String> result = decrypt(data, keyValue);
             int countValidWords = 0;
             for (String str : result) {
                 StringTokenizer tokenizer = new StringTokenizer(str, ",.?! :;'\"_\\/()");
@@ -95,8 +93,11 @@ public class CaesarCipher {
                     }
                 }
             }
-            if (countValidWords > 5) return result;
+            if (countValidWords > COUNT_WORDS_TO_VALIDATE) {
+                decryptedData.addAll(result);
+                return keyValue;
+            }
         }
-        return data;
+        return -1;
     }
 }

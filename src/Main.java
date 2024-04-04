@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
@@ -105,7 +106,34 @@ public class Main {
         bruteForceButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //
+                Path pathToDecrypt = Path.of(fileName.getText());
+                if (Files.isRegularFile(pathToDecrypt)) {
+                    Path pathDecrypted = pathToDecrypt.getParent().resolve("(decrypted)" + pathToDecrypt.getFileName());
+                    List<String> toDecStrings;
+                    int keyValue;
+                    try {
+                        toDecStrings = Files.readAllLines(pathToDecrypt);
+                        List<String> decryptedStrings = new ArrayList<>();
+                        keyValue = CaesarCipher.bruteForce(toDecStrings, decryptedStrings);
+                        Files.deleteIfExists(pathDecrypted);
+                        Files.createFile(pathDecrypted);
+                        String decStrings = decryptedStrings.toString();
+                        Files.writeString(pathDecrypted, decStrings.substring(1, decStrings.length() - 1));
+                    } catch (IOException ex) {
+                        log.setForeground(Color.RED);
+                        log.setText("Возникла ошибка!");
+                        throw new RuntimeException(ex);
+                    }
+                    if (keyValue == -1) {
+                        log.setForeground(Color.RED);
+                        log.setText("Ключ подобрать не удалось!");
+                    } else {
+                        log.setForeground(Color.BLACK);
+                        log.setText("<html>Ключ успешно подобран<br />" +
+                                "Файл " + pathToDecrypt.getFileName() + " успешно расшифрован с ключом " + keyValue + "<br/>" +
+                                "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + pathToDecrypt.getFileName() + "</html>");
+                    }
+                }
             }
         });
     }
