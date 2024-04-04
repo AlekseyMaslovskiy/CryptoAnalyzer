@@ -20,8 +20,9 @@ public class Main {
     private static JButton encryptButton;
     private static JButton decryptButton;
     private static JButton bruteForceButton;
-    private static JButton btn4;
+    private static JButton freqAnalyzeButton;
     private static JLabel log;
+
     public static void main(String[] args) {
         frame = new JFrame("Шифр Цезаря GUI");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -41,8 +42,7 @@ public class Main {
             @Override
             public void actionPerformed(ActionEvent e) {
                 JFileChooser fileChooser = new JFileChooser(".");
-                FileNameExtensionFilter filter = new FileNameExtensionFilter(
-                        "txt files", "txt");
+                FileNameExtensionFilter filter = new FileNameExtensionFilter("txt files", "txt");
                 fileChooser.setFileFilter(filter);
                 int returnVal = fileChooser.showOpenDialog(frame);
                 if (returnVal == JFileChooser.APPROVE_OPTION) {
@@ -72,8 +72,7 @@ public class Main {
                         throw new RuntimeException(ex);
                     }
                     log.setForeground(Color.BLACK);
-                    log.setText("<html>Файл " + pathToEncrypt.getFileName() + " успешно зашифрован с ключом " + keyValue + "<br/>" +
-                            "Результат сохранён в директории исходного файла с именем:<br />" + "(encrypted)" + pathToEncrypt.getFileName() + "</html>");
+                    log.setText("<html>Файл " + pathToEncrypt.getFileName() + " успешно зашифрован с ключом " + keyValue + "<br/>" + "Результат сохранён в директории исходного файла с именем:<br />" + "(encrypted)" + pathToEncrypt.getFileName() + "</html>");
                 }
             }
         });
@@ -98,8 +97,7 @@ public class Main {
                         throw new RuntimeException(ex);
                     }
                     log.setForeground(Color.BLACK);
-                    log.setText("<html>Файл " + pathToDecrypt.getFileName() + " успешно расшифрован с ключом " + keyValue + "<br/>" +
-                            "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + pathToDecrypt.getFileName() + "</html>");
+                    log.setText("<html>Файл " + pathToDecrypt.getFileName() + " успешно расшифрован с ключом " + keyValue + "<br/>" + "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + pathToDecrypt.getFileName() + "</html>");
                 }
             }
         });
@@ -129,9 +127,38 @@ public class Main {
                         log.setText("Ключ подобрать не удалось!");
                     } else {
                         log.setForeground(Color.BLACK);
-                        log.setText("<html>Ключ успешно подобран<br />" +
-                                "Файл " + pathToDecrypt.getFileName() + " успешно расшифрован с ключом " + keyValue + "<br/>" +
-                                "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + pathToDecrypt.getFileName() + "</html>");
+                        log.setText("<html>Ключ успешно подобран<br />" + "Файл " + pathToDecrypt.getFileName() + " успешно расшифрован с ключом " + keyValue + "<br/>" + "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + pathToDecrypt.getFileName() + "</html>");
+                    }
+                }
+            }
+        });
+        freqAnalyzeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Path pathToDecrypt = Path.of(fileName.getText());
+                if (Files.isRegularFile(pathToDecrypt)) {
+                    Path pathDecrypted = pathToDecrypt.getParent().resolve("(decrypted)" + pathToDecrypt.getFileName());
+                    List<String> toDecStrings;
+                    int keyValue;
+                    try {
+                        toDecStrings = Files.readAllLines(pathToDecrypt);
+                        List<String> decryptedStrings = new ArrayList<>();
+                        keyValue = CaesarCipher.frequencyAnalyze(toDecStrings, decryptedStrings);
+                        Files.deleteIfExists(pathDecrypted);
+                        Files.createFile(pathDecrypted);
+                        String decStrings = decryptedStrings.toString();
+                        Files.writeString(pathDecrypted, decStrings.substring(1, decStrings.length() - 1));
+                    } catch (IOException ex) {
+                        log.setForeground(Color.RED);
+                        log.setText("Возникла ошибка!");
+                        throw new RuntimeException(ex);
+                    }
+                    if (keyValue == -1) {
+                        log.setForeground(Color.RED);
+                        log.setText("Ключ подобрать не удалось!");
+                    } else {
+                        log.setForeground(Color.BLACK);
+                        log.setText("<html>Ключ успешно подобран<br />" + "Файл " + pathToDecrypt.getFileName() + " успешно расшифрован с ключом " + keyValue + "<br/>" + "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + pathToDecrypt.getFileName() + "</html>");
                     }
                 }
             }
@@ -152,15 +179,15 @@ public class Main {
         encryptButton = new JButton("Зашифровать");
         decryptButton = new JButton("Расшифровать");
         bruteForceButton = new JButton("BruteForce");
-        btn4 = new JButton("Частотный анализ");
+        freqAnalyzeButton = new JButton("Частотный анализ");
         encryptButton.setPreferredSize(new Dimension(150, 30));
         decryptButton.setPreferredSize(new Dimension(150, 30));
         bruteForceButton.setPreferredSize(new Dimension(150, 30));
-        btn4.setPreferredSize(new Dimension(150, 30));
+        freqAnalyzeButton.setPreferredSize(new Dimension(150, 30));
         buttonsPanel.add(encryptButton);
         buttonsPanel.add(decryptButton);
         buttonsPanel.add(bruteForceButton);
-        buttonsPanel.add(btn4);
+        buttonsPanel.add(freqAnalyzeButton);
         frame.add(buttonsPanel);
     }
 
@@ -183,48 +210,4 @@ public class Main {
         mainLayout = new FlowLayout(FlowLayout.LEFT, 10, 10);
         frame.setLayout(mainLayout);
     }
-    /* public static void main(String[] args) {
-
-        Path encSource = Path.of("ToEncrypt.txt");
-        Path encDest = Path.of("Encrypted.txt");
-        Path decSource = Path.of("ToDecrypt.txt");
-        Path decDest = Path.of("Decrypted.txt");
-        //
-        Path orig = Path.of("C:\\Dir1\\file.txt");
-        Path val = orig.getParent().resolve("Encrypted_" + String.valueOf(orig.getFileName()));
-        System.out.println(val);
-        //
-        List<String> toEncStrings;
-        try {
-            toEncStrings = Files.readAllLines(encSource);
-        } catch (IOException e) {
-            throw new RuntimeException("Error while reading file for encryption\n" + e);
-        }
-        List<String> encryptedStrings = CaesarCipher.encrypt(toEncStrings, 5);
-        Files.deleteIfExists(encDest);
-        try {
-            Files.createFile(encDest);
-        } catch (IOException e) {
-            throw new RuntimeException("Error while creating file for encryption result\n" + e);
-        }
-        String encStrings = encryptedStrings.toString();
-        Files.writeString(encDest, encStrings.substring(1, encStrings.length() - 1));
-        //
-        List<String> toDecStrings;
-        try {
-            toDecStrings = Files.readAllLines(decSource);
-        } catch (IOException e) {
-            throw new RuntimeException("Error while reading file for decryption\n" + e);
-        }
-        //List<String> decryptedStrings = CaesarCipher.decrypt(toDecStrings, 5);
-        List<String> decryptedStrings = CaesarCipher.bruteForce(toDecStrings);
-        Files.deleteIfExists(decDest);
-        try {
-            Files.createFile(decDest);
-        } catch (IOException e) {
-            throw new RuntimeException("Error while creating file for encryption result\n" + e);
-        }
-        String decStrings = decryptedStrings.toString();
-        Files.writeString(decDest, decStrings.substring(1, decStrings.length() - 1));
-    } */
 }
