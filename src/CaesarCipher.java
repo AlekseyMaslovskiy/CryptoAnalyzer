@@ -4,11 +4,11 @@ public class CaesarCipher {
     private static final String ALPHABET = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
     // Список сотни самых часто употребляемых слов по версии "Национального корпуса русского языка"
     private static final HashSet<String> FREQUENT_WORDS = new HashSet<>() {{
-        add("и");
+        add("лицо");
         add("что");
         add("до");
         add("во");
-        add("в");
+        add("каждый");
         add("весь");
         add("время");
         add("со");
@@ -20,19 +20,19 @@ public class CaesarCipher {
         add("от");
         add("сам");
         add("где");
-        add("я");
+        add("друг");
         add("так");
         add("когда");
         add("там");
         add("быть");
-        add("о");
+        add("нет");
         add("другой");
         add("под");
         add("он");
         add("для");
         add("вот");
         add("можно");
-        add("с");
+        add("теперь");
         add("ты");
         add("говорить");
         add("ну");
@@ -40,7 +40,7 @@ public class CaesarCipher {
         add("же");
         add("наш");
         add("какой");
-        add("а");
+        add("ни");
         add("все");
         add("мой");
         add("после");
@@ -60,7 +60,7 @@ public class CaesarCipher {
         add("человек");
         add("чтобы");
         add("самый");
-        add("к");
+        add("глаз");
         add("такой");
         add("дело");
         add("потом");
@@ -84,7 +84,7 @@ public class CaesarCipher {
         add("ещё");
         add("два");
         add("идти");
-        add("у");
+        add("тоже");
         add("бы");
         add("день");
         add("большой");
