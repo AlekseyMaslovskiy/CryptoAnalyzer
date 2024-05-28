@@ -1,8 +1,6 @@
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -39,165 +37,162 @@ public class Main {
     }
 
     private static void addListeners() {
-        openFileDialogButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                JFileChooser fileChooser = new JFileChooser(".");
-                FileNameExtensionFilter filter = new FileNameExtensionFilter("txt files", "txt");
-                fileChooser.setFileFilter(filter);
-                int returnVal = fileChooser.showOpenDialog(frame);
-                if (returnVal == JFileChooser.APPROVE_OPTION) {
-                    File selectedFile = fileChooser.getSelectedFile();
-                    fileName.setText(selectedFile.getAbsolutePath());
-                }
+        openFileDialogButton.addActionListener(e -> {
+            File selectedFile = chooseFile();
+            if (selectedFile != null) {
+                fileName.setText(selectedFile.getAbsolutePath());
             }
         });
-        encryptButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                long startTime = Instant.now().toEpochMilli();
-                Path pathToEncrypt = Path.of(fileName.getText());
-                int keyValue = Integer.parseInt(key.getText());
-                if (Files.isRegularFile(pathToEncrypt) && keyValue > 0) {
-                    Path pathEncrypted = pathToEncrypt.getParent().resolve("(encrypted)" + pathToEncrypt.getFileName());
-                    List<String> toEncStrings;
-                    try {
-                        toEncStrings = Files.readAllLines(pathToEncrypt);
-                        List<String> encryptedStrings = CaesarCipher.encrypt(toEncStrings, keyValue);
-                        Files.deleteIfExists(pathEncrypted);
-                        Files.createFile(pathEncrypted);
-                        StringBuilder encStrings = new StringBuilder();
-                        for (int i = 0; i < encryptedStrings.size(); i++) {
-                            encStrings.append(encryptedStrings.get(i));
-                            if (i != encryptedStrings.size() - 1) encStrings.append("\n");
-                        }
-                        Files.writeString(pathEncrypted, encStrings.toString());
-                    } catch (IOException ex) {
-                        log.setForeground(Color.RED);
-                        log.setText("Возникла ошибка!");
-                        throw new RuntimeException(ex);
-                    }
-                    long time = Instant.now().toEpochMilli() - startTime;
-                    log.setForeground(Color.BLACK);
-                    log.setText("<html>Файл " + pathToEncrypt.getFileName() + " успешно зашифрован с ключом " + keyValue + "<br/>"
-                            + "Результат сохранён в директории исходного файла с именем:<br />" + "(encrypted)" + pathToEncrypt.getFileName() + "<br/>"
-                            + "Время затрачено " + time + " миллисекунд" + "</html>");
+        encryptButton.addActionListener(e -> {
+            long startTime = Instant.now().toEpochMilli();
+            Path path = Path.of(fileName.getText());
+            int key = Integer.parseInt(Main.key.getText());
+            FileReadManager inputFile = new FileReadManager(path);
+            if (inputFile.isExist()) {
+                try {
+                    inputFile.readFile();
+                } catch (IOException ex) {
+                    log.setForeground(Color.RED);
+                    log.setText("Возникла ошибка!");
+                    throw new RuntimeException(ex);
                 }
+                InputDataBox inputDataBox = new InputDataBox(inputFile.getSource(), key);
+                OutputDataBox outputDataBox = new ActionExecutor(inputDataBox, Operation.ENCRYPT).execute();
+                FileWriteManager outputFile = new FileWriteManager(outputDataBox.getResult());
+                try {
+                    outputFile.writeFile(path.getParent().resolve("(encrypted)" + path.getFileName()));
+                } catch (IOException ex) {
+                    log.setForeground(Color.RED);
+                    log.setText("Возникла ошибка!");
+                    throw new RuntimeException(ex);
+                }
+                long time = Instant.now().toEpochMilli() - startTime;
+                log.setForeground(Color.BLACK);
+                log.setText("<html>Файл " + path.getFileName() + " успешно зашифрован с ключом " + key + "<br/>"
+                        + "Результат сохранён в директории исходного файла с именем:<br />" + "(encrypted)" + path.getFileName() + "<br/>"
+                        + "Время затрачено " + time + " миллисекунд" + "</html>");
+            } else {
+                log.setForeground(Color.RED);
+                log.setText("Файл не найден!");
             }
         });
-        decryptButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                long startTime = Instant.now().toEpochMilli();
-                Path pathToDecrypt = Path.of(fileName.getText());
-                int keyValue = Integer.parseInt(key.getText());
-                if (Files.isRegularFile(pathToDecrypt) && keyValue > 0) {
-                    Path pathDecrypted = pathToDecrypt.getParent().resolve("(decrypted)" + pathToDecrypt.getFileName());
-                    List<String> toDecStrings;
-                    try {
-                        toDecStrings = Files.readAllLines(pathToDecrypt);
-                        List<String> decryptedStrings = CaesarCipher.decrypt(toDecStrings, keyValue);
-                        Files.deleteIfExists(pathDecrypted);
-                        Files.createFile(pathDecrypted);
-                        StringBuilder decStrings = new StringBuilder();
-                        for (int i = 0; i < decryptedStrings.size(); i++) {
-                            decStrings.append(decryptedStrings.get(i));
-                            if (i != decryptedStrings.size() - 1) decStrings.append("\n");
-                        }
-                        Files.writeString(pathDecrypted, decStrings.toString());
-                    } catch (IOException ex) {
-                        log.setForeground(Color.RED);
-                        log.setText("Возникла ошибка!");
-                        throw new RuntimeException(ex);
-                    }
-                    long time = Instant.now().toEpochMilli() - startTime;
-                    log.setForeground(Color.BLACK);
-                    log.setText("<html>Файл " + pathToDecrypt.getFileName() + " успешно расшифрован с ключом " + keyValue + "<br/>"
-                            + "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + pathToDecrypt.getFileName() + "<br/>"
-                            + "Время затрачено " + time + " миллисекунд" + "</html>");
+        decryptButton.addActionListener(e -> {
+            long startTime = Instant.now().toEpochMilli();
+            Path path = Path.of(fileName.getText());
+            int key = Integer.parseInt(Main.key.getText());
+            FileReadManager inputFile = new FileReadManager(path);
+            if (inputFile.isExist()) {
+                try {
+                    inputFile.readFile();
+                } catch (IOException ex) {
+                    log.setForeground(Color.RED);
+                    log.setText("Возникла ошибка!");
+                    throw new RuntimeException(ex);
                 }
+                InputDataBox inputDataBox = new InputDataBox(inputFile.getSource(), key);
+                OutputDataBox outputDataBox = new ActionExecutor(inputDataBox, Operation.DECRYPT).execute();
+                FileWriteManager outputFile = new FileWriteManager(outputDataBox.getResult());
+                try {
+                    outputFile.writeFile(path.getParent().resolve("(decrypted)" + path.getFileName()));
+                } catch (IOException ex) {
+                    log.setForeground(Color.RED);
+                    log.setText("Возникла ошибка!");
+                    throw new RuntimeException(ex);
+                }
+                long time = Instant.now().toEpochMilli() - startTime;
+                log.setForeground(Color.BLACK);
+                log.setText("<html>Файл " + path.getFileName() + " успешно расшифрован с ключом " + key + "<br/>"
+                        + "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + path.getFileName() + "<br/>"
+                        + "Время затрачено " + time + " миллисекунд" + "</html>");
+            } else {
+                log.setForeground(Color.RED);
+                log.setText("Файл не найден!");
             }
         });
-        bruteForceButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                long startTime = Instant.now().toEpochMilli();
-                Path pathToDecrypt = Path.of(fileName.getText());
-                if (Files.isRegularFile(pathToDecrypt)) {
-                    Path pathDecrypted = pathToDecrypt.getParent().resolve("(decrypted)" + pathToDecrypt.getFileName());
-                    List<String> toDecStrings;
-                    int keyValue;
-                    try {
-                        toDecStrings = Files.readAllLines(pathToDecrypt);
-                        List<String> decryptedStrings = new ArrayList<>();
-                        keyValue = CaesarCipher.bruteForce(toDecStrings, decryptedStrings);
-                        Files.deleteIfExists(pathDecrypted);
-                        Files.createFile(pathDecrypted);
-                        StringBuilder decStrings = new StringBuilder();
-                        for (int i = 0; i < decryptedStrings.size(); i++) {
-                            decStrings.append(decryptedStrings.get(i));
-                            if (i != decryptedStrings.size() - 1) decStrings.append("\n");
-                        }
-                        Files.writeString(pathDecrypted, decStrings.toString());
-                    } catch (IOException ex) {
-                        log.setForeground(Color.RED);
-                        log.setText("Возникла ошибка!");
-                        throw new RuntimeException(ex);
-                    }
-                    if (keyValue == -1) {
-                        log.setForeground(Color.RED);
-                        log.setText("Ключ подобрать не удалось!");
-                    } else {
-                        long time = Instant.now().toEpochMilli() - startTime;
-                        log.setForeground(Color.BLACK);
-                        log.setText("<html>Ключ успешно подобран<br />" +
-                                "Файл " + pathToDecrypt.getFileName() + " успешно расшифрован с ключом " + keyValue + "<br/>" +
-                                "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + pathToDecrypt.getFileName() + "<br/>" +
-                                "Время затрачено " + time + " миллисекунд" + "</html>");
-                    }
+        bruteForceButton.addActionListener(e -> {
+            long startTime = Instant.now().toEpochMilli();
+            Path path = Path.of(fileName.getText());
+            FileReadManager inputFile = new FileReadManager(path);
+            if (inputFile.isExist()) {
+                try {
+                    inputFile.readFile();
+                } catch (IOException ex) {
+                    log.setForeground(Color.RED);
+                    log.setText("Возникла ошибка!");
+                    throw new RuntimeException(ex);
                 }
+                InputDataBox inputDataBox = new InputDataBox(inputFile.getSource(), 0);
+                OutputDataBox outputDataBox = new ActionExecutor(inputDataBox, Operation.BRUTEFORCE).execute();
+                FileWriteManager outputFile = new FileWriteManager(outputDataBox.getResult());
+                try {
+                    outputFile.writeFile(path.getParent().resolve("(decrypted)" + path.getFileName()));
+                } catch (IOException ex) {
+                    log.setForeground(Color.RED);
+                    log.setText("Возникла ошибка!");
+                    throw new RuntimeException(ex);
+                }
+                long time = Instant.now().toEpochMilli() - startTime;
+                log.setForeground(Color.BLACK);
+                log.setText("<html>Ключ успешно подобран<br />" +
+                        "Файл " + path.getFileName() + " успешно расшифрован с ключом " + outputDataBox.getKey() + "<br/>" +
+                        "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + path.getFileName() + "<br/>" +
+                        "Время затрачено " + time + " миллисекунд" + "</html>");
+                if (outputDataBox.getKey() == -1) {
+                    log.setForeground(Color.RED);
+                    log.setText("<html>Ключ не удалось подобрать</html>");
+                }
+            } else {
+                log.setForeground(Color.RED);
+                log.setText("Файл не найден!");
             }
         });
-        freqAnalyzeButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                long startTime = Instant.now().toEpochMilli();
-                Path pathToDecrypt = Path.of(fileName.getText());
-                if (Files.isRegularFile(pathToDecrypt)) {
-                    Path pathDecrypted = pathToDecrypt.getParent().resolve("(decrypted)" + pathToDecrypt.getFileName());
-                    List<String> toDecStrings;
-                    int keyValue;
-                    try {
-                        toDecStrings = Files.readAllLines(pathToDecrypt);
-                        List<String> decryptedStrings = new ArrayList<>();
-                        keyValue = CaesarCipher.frequencyAnalyze(toDecStrings, decryptedStrings);
-                        Files.deleteIfExists(pathDecrypted);
-                        Files.createFile(pathDecrypted);
-                        StringBuilder decStrings = new StringBuilder();
-                        for (int i = 0; i < decryptedStrings.size(); i++) {
-                            decStrings.append(decryptedStrings.get(i));
-                            if (i != decryptedStrings.size() - 1) decStrings.append("\n");
-                        }
-                        Files.writeString(pathDecrypted, decStrings.toString());
-                    } catch (IOException ex) {
-                        log.setForeground(Color.RED);
-                        log.setText("Возникла ошибка!");
-                        throw new RuntimeException(ex);
-                    }
-                    if (keyValue == -1) {
-                        log.setForeground(Color.RED);
-                        log.setText("Ключ подобрать не удалось!");
-                    } else {
-                        long time = Instant.now().toEpochMilli() - startTime;
-                        log.setForeground(Color.BLACK);
-                        log.setText("<html>Ключ успешно подобран<br />" +
-                                "Файл " + pathToDecrypt.getFileName() + " успешно расшифрован с ключом " + keyValue + "<br/>" +
-                                "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + pathToDecrypt.getFileName() + "<br/>" +
-                                "Время затрачено " + time + " миллисекунд" + "</html>");
-                    }
+        freqAnalyzeButton.addActionListener(e -> {
+            long startTime = Instant.now().toEpochMilli();
+            Path path = Path.of(fileName.getText());
+            FileReadManager inputFile = new FileReadManager(path);
+            if (inputFile.isExist()) {
+                try {
+                    inputFile.readFile();
+                } catch (IOException ex) {
+                    log.setForeground(Color.RED);
+                    log.setText("Возникла ошибка!");
+                    throw new RuntimeException(ex);
                 }
+                InputDataBox inputDataBox = new InputDataBox(inputFile.getSource(), 0);
+                OutputDataBox outputDataBox = new ActionExecutor(inputDataBox, Operation.STATISTICAL_ANALYSIS).execute();
+                FileWriteManager outputFile = new FileWriteManager(outputDataBox.getResult());
+                try {
+                    outputFile.writeFile(path.getParent().resolve("(decrypted)" + path.getFileName()));
+                } catch (IOException ex) {
+                    log.setForeground(Color.RED);
+                    log.setText("Возникла ошибка!");
+                    throw new RuntimeException(ex);
+                }
+                long time = Instant.now().toEpochMilli() - startTime;
+                log.setForeground(Color.BLACK);
+                log.setText("<html>Ключ успешно подобран<br />" +
+                        "Файл " + path.getFileName() + " успешно расшифрован с ключом " + outputDataBox.getKey() + "<br/>" +
+                        "Результат сохранён в директории исходного файла с именем:<br />" + "(decrypted)" + path.getFileName() + "<br/>" +
+                        "Время затрачено " + time + " миллисекунд" + "</html>");
+                if (outputDataBox.getKey() == -1) {
+                    log.setForeground(Color.RED);
+                    log.setText("<html>Ключ не удалось подобрать</html>");
+                }
+            } else {
+                log.setForeground(Color.RED);
+                log.setText("Файл не найден!");
             }
         });
+    }
+
+    private static File chooseFile() {
+        JFileChooser fileChooser = new JFileChooser(".");
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("txt files", "txt");
+        fileChooser.setFileFilter(filter);
+        int returnVal = fileChooser.showOpenDialog(frame);
+        if (returnVal == JFileChooser.APPROVE_OPTION)
+            return fileChooser.getSelectedFile();
+        else return null;
     }
 
     private static void createLogField() {
